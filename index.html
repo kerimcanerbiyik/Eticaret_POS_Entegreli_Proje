@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MegaStore - E-Ticaret & POS Entegreli Platform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+
+    <!-- 1. MODEL KATMANI -->
+    <script>
+        class UrunModel {
+            constructor(baslik, fiyat, kategori, stok, saticiAdi) {
+                this.baslik = baslik;
+                this.fiyat = fiyat;
+                this.kategori = kategori;
+                this.stok = stok;
+                this.saticiAdi = saticiAdi;
+            }
+        }
+    </script>
+
+    <!-- 2. VIEWMODEL KATMANI -->
+    <script>
+        class TicaretViewModel {
+            constructor() {
+                this.urunler = [];
+                this.sepet = [];
+            }
+
+            async urunleriCek() {
+                try {
+                    const res = await fetch('/api/urunler');
+                    const sonuc = await res.json();
+                    if (sonuc.success) this.urunler = sonuc.data;
+                    return this.urunler;
+                } catch (err) {
+                    console.error("Hata:", err);
+                    return [];
+                }
+            }
+
+            async urunEkle(veri) {
+                try {
+                    const res = await fetch('/api/urun-ekle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(veri)
+                    });
+                    return await res.json();
+                } catch (err) {
+                    return { success: false, error: err.message };
+                }
+            }
+
+            async siparisVeOdemeYap(odemeVerisi) {
+                try {
+                    const toplamTutar = this.sepet.reduce((acc, item) => acc + (item.fiyat * item.adet), 0);
+                    const res = await fetch('/api/siparis-ver', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...odemeVerisi, urunler: this.sepet, toplamTutar })
+                    });
+                    const sonuc = await res.json();
+                    if (sonuc.success) this.sepet = [];
+                    return sonuc;
+                } catch (err) {
+                    return { success: false, error: err.message };
+                }
+            }
+
+            sepeteEkle(id) {
+                const urun = this.urunler.find(u => u._id === id);
+                if (!urun) return;
+                const mevcut = this.sepet.find(item => item._id === id);
+                if (mevcut) { mevcut.adet++; } 
+                else { this.sepet.push({ ...urun, adet: 1 }); }
+            }
+        }
+    </script>
+
+    <!-- 3. VIEW KATMANI -->
+    <div id="uygulamaKapsami" class="max-w-7xl mx-auto p-6">
+        
+        <header class="bg-white shadow-sm rounded-xl p-6 mb-8 flex justify-between items-center border border-slate-100">
+            <div>
+                <h1 class="text-3xl font-extrabold text-orange-600">MegaStore</h1>
+                <p class="text-slate-500 text-sm mt-1">Çok Satıcılı E-Ticaret Vitrini + POS Ödeme Sistemi Bir Arada</p>
+            </div>
+            <div class="bg-orange-50 border border-orange-200 px-4 py-2 rounded-lg text-orange-700 font-semibold text-sm">
+                🛒 Sepet: <span id="sepetSayisi">0</span> Ürün
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Sol Kolon -->
+            <div class="lg:col-span-2 space-y-8">
+                <section class="bg-white shadow-sm rounded-xl p-6 border border-slate-100">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">📦 Satıcı Ürün Ekle</h2>
+                    <form id="urunForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="baslik" placeholder="Ürün Adı" required class="px-4 py-2.5 border border-slate-200 rounded-lg outline-none">
+                        <input type="number" id="fiyat" placeholder="Fiyat (TL)" required class="px-4 py-2.5 border border-slate-200 rounded-lg outline-none">
+                        <input type="text" id="kategori" placeholder="Kategori" required class="px-4 py-2.5 border border-slate-200 rounded-lg outline-none">
+                        <input type="number" id="stok" placeholder="Stok" required class="px-4 py-2.5 border border-slate-200 rounded-lg outline-none">
+                        <input type="text" id="saticiAdi" placeholder="Mağaza Adı" required class="md:col-span-2 px-4 py-2.5 border border-slate-200 rounded-lg outline-none">
+                        <button type="submit" class="md:col-span-2 bg-orange-600 text-white font-semibold py-3 rounded-lg hover:bg-orange-700 transition">
+                            Ürünü Yayınla
+                        </button>
+                    </form>
+                    <div id="formMesaj" class="mt-3 text-sm font-medium text-center hidden"></div>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">🔥 Vitrin Ürünleri</h2>
+                    <div id="urunListesi" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </section>
+            </div>
+
+            <!-- Sağ Kolon -->
+            <div>
+                <section class="bg-white shadow-sm rounded-xl p-6 border border-slate-100 sticky top-6">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">🛍️ Alışveriş Sepetim & POS Ödeme</h2>
+                    <div id="sepetListesi" class="space-y-3 mb-6 max-h-48 overflow-y-auto">
+                        <p class="text-slate-400 text-sm text-center py-4">Sepetiniz boş.</p>
+                    </div>
+                    
+                    <div class="border-t pt-4 space-y-3">
+                        <div class="flex justify-between text-lg font-bold">
+                            <span>Toplam:</span>
+                            <span id="sepetToplam" class="text-orange-600">0 TL</span>
+                        </div>
+                        
+                        <input type="text" id="musteriAdi" placeholder="Adınız Soyadınız" required class="w-full px-4 py-2.5 border border-slate-200 rounded-lg outline-none text-sm">
+                        <input type="text" id="kartNumarasi" placeholder="Kredi Kartı Numarası" required class="w-full px-4 py-2.5 border border-slate-200 rounded-lg outline-none text-sm">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" placeholder="AA/YY" class="px-4 py-2.5 border border-slate-200 rounded-lg outline-none text-sm">
+                            <input type="password" placeholder="CVV" maxlength="3" class="px-4 py-2.5 border border-slate-200 rounded-lg outline-none text-sm">
+                        </div>
+
+                        <button id="posSiparisBtn" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-lg hover:bg-emerald-700 transition shadow-sm">
+                            POS ile Güvenli Öde & Sipariş Ver
+                        </button>
+                        <div id="siparisMesaj" class="text-sm font-medium text-center hidden"></div>
+                    </div>
+                </section>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 4. GÖRÜNÜM BAĞLAMA VE ÇAĞIRMA KISMI -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const vm = new TicaretViewModel();
+            const container = document.getElementById('uygulamaKapsami');
+
+            const form = container.querySelector('#urunForm');
+            const mesajDiv = container.querySelector('#formMesaj');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const yeniUrun = new UrunModel(
+                    container.querySelector('#baslik').value,
+                    Number(container.querySelector('#fiyat').value),
+                    container.querySelector('#kategori').value,
+                    Number(container.querySelector('#stok').value),
+                    container.querySelector('#saticiAdi').value
+                );
+
+                const sonuc = await vm.urunEkle(yeniUrun);
+                mesajDiv.textContent = sonuc.message;
+                mesajDiv.classList.remove('hidden');
+                mesajDiv.className = `mt-3 text-sm font-medium text-center ${sonuc.success ? 'text-emerald-600' : 'text-rose-600'}`;
+
+                if (sonuc.success) {
+                    form.reset();
+                    await renderVitrin();
+                }
+            });
+
+            const listeDiv = container.querySelector('#urunListesi');
+
+            async function renderVitrin() {
+                const urunler = await vm.urunleriCek();
+                if (urunler.length === 0) {
+                    listeDiv.innerHTML = `<p class="text-slate-400 md:col-span-2 text-center py-8 bg-white rounded-xl">Vitrin boş.</p>`;
+                    return;
+                }
+
+                listeDiv.innerHTML = urunler.map(u => `
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="px-2.5 py-0.5 bg-orange-50 text-orange-700 text-xs font-semibold rounded-full">${u.kategori}</span>
+                                <span class="text-lg font-bold text-orange-600">${u.fiyat.toLocaleString()} TL</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-800">${u.baslik}</h3>
+                            <p class="text-slate-400 text-xs mb-4">Mağaza: ${u.saticiAdi}</p>
+                        </div>
+                        <button type="button" class="sepete-ekle-btn w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-orange-600 transition" data-id="${u._id}">
+                            Sepete Ekle
+                        </button>
+                    </div>
+                `).join('');
+
+                listeDiv.querySelectorAll('.sepete-ekle-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        vm.sepeteEkle(btn.getAttribute('data-id'));
+                        renderSepet();
+                    });
+                });
+            }
+
+            const sepetDiv = container.querySelector('#sepetListesi');
+            const toplamDiv = container.querySelector('#sepetToplam');
+            const sayacDiv = container.querySelector('#sepetSayisi');
+            const posSiparisBtn = container.querySelector('#posSiparisBtn');
+            const siparisMesaj = container.querySelector('#siparisMesaj');
+
+            function renderSepet() {
+                sayacDiv.textContent = vm.sepet.reduce((acc, i) => acc + i.adet, 0);
+
+                if (vm.sepet.length === 0) {
+                    sepetDiv.innerHTML = `<p class="text-slate-400 text-sm text-center py-4">Sepetiniz boş.</p>`;
+                    toplamDiv.textContent = `0 TL`;
+                    return;
+                }
+
+                let toplam = 0;
+                sepetDiv.innerHTML = vm.sepet.map(item => {
+                    toplam += item.fiyat * item.adet;
+                    return `
+                        <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg text-sm">
+                            <div>
+                                <p class="font-semibold">${item.baslik}</p>
+                                <p class="text-xs text-slate-400">${item.adet} adet</p>
+                            </div>
+                            <span class="font-bold">${item.fiyat * item.adet} TL</span>
+                        </div>
+                    `;
+                }).join('');
+
+                toplamDiv.textContent = `${toplam.toLocaleString()} TL`;
+            }
+
+            posSiparisBtn.addEventListener('click', async () => {
+                const musteriAdi = container.querySelector('#musteriAdi').value;
+                const kartNumarasi = container.querySelector('#kartNumarasi').value;
+
+                if (!musteriAdi || !kartNumarasi || vm.sepet.length === 0) {
+                    alert("Lütfen adınızı, kart numaranızı girin ve sepetinize ürün ekleyin.");
+                    return;
+                }
+
+                posSiparisBtn.disabled = true;
+                posSiparisBtn.textContent = "POS Ödemesi Alınıyor...";
+
+                const sonuc = await vm.siparisVeOdemeYap({ musteriAdi, kartNumarasi });
+                
+                siparisMesaj.textContent = sonuc.success ? `Ödeme Başarılı! Sipariş ID: ${sonuc.siparisId}` : `Hata: ${sonuc.error}`;
+                siparisMesaj.classList.remove('hidden');
+                siparisMesaj.className = `text-sm font-medium text-center ${sonuc.success ? 'text-emerald-600 font-semibold' : 'text-rose-600'}`;
+                
+                posSiparisBtn.disabled = false;
+                posSiparisBtn.textContent = "POS ile Güvenli Öde & Sipariş Ver";
+                renderSepet();
+            });
+
+            renderVitrin();
+        });
+    </script>
+</body>
+</html>

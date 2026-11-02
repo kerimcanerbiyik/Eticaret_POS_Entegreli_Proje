@@ -1,0 +1,62 @@
+# 🚀 E-Ticaret & POS Entegreli Platform - Kurulum ve Kullanım Rehberi
+
+Bu rehber, çok satıcılı e-ticaret vitrini ile Iyzico / Kredi Kartı POS ödeme altyapısını tek bir projede birleştiren bu muhteşem sistemi bilgisayarınızda çalıştırmanız, GitHub'a yüklemeniz ve Bionluk'ta satışa çıkarabilmeniz için adım adım hazırlanmıştır.
+
+---
+
+## 🛠️ 1. DOSYA YAPISI
+Proje klasörünüzde şu iki temel dosya bulunmalıdır:
+1. `server.js` (Arka plan: Model -> Service -> Controller / Rota yönlendirmeleri ve POS ödeme mantığı)
+2. `index.html` (Ön yüz: Model -> ViewModel -> View / Vitrin, Sepet ve Kredi Kartı POS Ödeme Formu)
+
+---
+
+## 💻 2. BİLGİSAYARINIZDA (LOKALDE) ÇALIŞTIRMA TESTİ
+
+1. Bilgisayarınızda VS Code uygulamasını açın ve proje klasörünü içeri aktarın.
+2. Terminali açın (`Terminal > New Terminal`) ve şu komutla gerekli kütüphaneleri yükleyin:
+   ```bash
+   npm install express mongoose cors
+   ```
+3. `server.js` dosyasının üst kısmında yer alan MongoDB Atlas bağlantı adresini kendi bilgilerinize göre güncelleyin (veya mevcut test bağlantısıyla bırakın):
+   ```javascript
+   const MONGO_URI = 'mongodb+srv://KULLANICI_ADINIZ:SIFRENIZ@cluster_adi.mongodb.net/veritabani_adi?retryWrites=true&w=majority';
+   ```
+4. Eğer Iyzico veya farklı bir canlı POS entegrasyon API anahtarı kullanacaksanız, `server.js` içerisindeki `posOdemeYap` fonksiyonuna kendi API anahtarınızı (API Key & Secret Key) bağlayabilirsiniz.
+5. Sunucuyu başlatın:
+   ```bash
+   node server.js
+   ```
+6. Tarayıcınızı açın ve test edin:
+   👉 **http://localhost:3000**
+
+---
+
+## 🌐 3. GİTHUB'A YÜKLEME (Private / Public Repo)
+
+Kodları güvenle saklamak ve canlıya almak için:
+1. GitHub.com adresine gidin, sağ üstten **"New repository"** deyin.
+2. Repository adını girin (Örn: `kurumsal-eticaret-pos`).
+3. **Private** veya **Public** seçip oluşturun.
+4. VS Code terminalinde şu komutları çalıştırın:
+   ```bash
+   git init
+   git add .
+   git commit -m "E-Ticaret ve POS entegreli tam surum"
+   git branch -M main
+   git remote add origin https://github.com/KULLANICI_ADINIZ/repo_adi.git
+   git push -u origin main
+   ```
+
+---
+
+## 💼 4. BİONLUK'TA SATIŞ VE PAZARLAMA STRATEJİSİ
+
+Bu projeyi Bionluk'ta **"Özel E-Ticaret Yazılımı"**, **"Node.js E-Ticaret & POS Entegrasyonu"** veya **"Hazır E-Ticaret Scripti"** başlıklarıyla satabilirsiniz!
+
+* **Müşteriye Ne Sunacaksınız?**
+  - Modern, şık Tailwind CSS arayüzü.
+  - Çok satıcılı ürün ekleme ve vitrin yönetimi.
+  - Gerçek zamanlı sepet ve kredi kartı POS / Iyzico ödeme simülasyonu.
+  - Temiz, modüler, endüstri standardı **Model-Service-Controller** ve **MVVM** mimarisi.
+* **Fiyatlandırma Önerisi:** Bionluk'ta bu tarz anahtar teslim hazır yazılımları ve kurulum desteğini cazip bir başlangıç fiyatıyla sunarak çok rahat müşteri çekebilir ve satış yapabilirsiniz. Sistem kusursuz çalışıyor, şimdiden bol kazançlar!
